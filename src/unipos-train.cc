@@ -383,7 +383,7 @@ int main(int argc, char **argv)
   vector<pair<vector<int>, vector<int>>> training, dev;
   string line;
 
-  // load word embeddings for English
+  // load cross-lingual word embeddings
   unsigned welc = 0;
   unsigned dim = 0;
   string embeddingFile = argv[1];
