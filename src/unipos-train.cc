@@ -390,7 +390,7 @@ int main(int argc, char **argv)
   embeddings_cl = importEmbeddings(embeddingFile);
   d.freeze(); // no new word types allowed
   d.set_unk("<UNK>");
-  VOCAB_SIZE = d.size();
+  VOCAB_SIZE_cl = d.size();
 
   string dataFile = argv[2];
   training = loadCorpus(dataFile);
