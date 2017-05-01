@@ -93,7 +93,7 @@ struct JointTagger
 
   // return Expression of total loss
   Expression BuildTaggingGraph(const vector<int> &sent, const vector<int> &tags,
-                               ComputationGraph &cg, unsigned *ntagged = 0, unsigned isDistant = 0)
+                               ComputationGraph &cg, int isDistant = 0, unsigned *ntagged = 0)
   {
     const unsigned slen = sent.size();
     l2rbuilder.new_graph(cg); // reset RNN builder for new graph
@@ -307,7 +307,7 @@ struct JointTagger
           }
         }
         //save the tags
-        outputFile << td.Convert(besti) << " ";
+        outputFile << td.convert(besti) << " ";
       }
     }
     outputFile << "\n";
@@ -413,12 +413,12 @@ vector<pair<vector<int>, vector<int>>> loadCorpus(string inputFile)
   return data;
 }
 
-void trainData(vector<pair<vector<int>, vector<int>>> &training, JointTagger<LSTMBuilder> &tagger, Trainer *sgd, unsigned isDistant = 0)
+void trainData(vector<pair<vector<int>, vector<int>>> &training, JointTagger<LSTMBuilder> &tagger, Trainer *sgd, int isDistant)
 {
   int report = 0;
   int report_every_i = 100;
   double loss = 0;
-  int ttags = 0;
+  unsigned ttags = 0;
   unsigned budget = training.size();
   cerr << "\nTraining labelled data: size = " << budget << " sentences";
   for (unsigned i = 0; i < budget; ++i)
@@ -427,7 +427,7 @@ void trainData(vector<pair<vector<int>, vector<int>>> &training, JointTagger<LST
     ComputationGraph cg;
     auto &sent = training[i];
     //cerr << "Compute loss\n";
-    Expression loss_expr = tagger.BuildTaggingGraph(sent.first, sent.second, cg, &ttags, isDistant);
+    Expression loss_expr = tagger.BuildTaggingGraph(sent.first, sent.second, cg, isDistant, &ttags);
     loss += as_scalar(cg.forward(loss_expr));
     cg.backward(loss_expr);
     sgd->update(1.0);
@@ -539,12 +539,12 @@ int main(int argc, char **argv)
     //epoch++;
     cerr << "\n***Training [epoch=" << epoch << "]";
     // train the gold data and distant data
-    unsigned isDistant = 1;
+    int isDistant = 1;
     trainData(distant, tagger, sgd, isDistant);
     sgd->status();
 
-    gold_size = len(gold);
-    distant_size = len(distant);
+    int gold_size = gold.size();
+    int distant_size = distant.size();
     for (int i = 0; i < distant_size / gold_size; i++)
     {
       isDistant = 0;

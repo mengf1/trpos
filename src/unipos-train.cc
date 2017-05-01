@@ -137,7 +137,7 @@ struct UniTagger
         Expression i_t = affine_transform({i_tbias, i_th2t, i_th});
         if (cor)
         {
-          vector<float> dist = as_vector(cg.incremental_forward());
+          vector<float> dist = as_vector(cg.incremental_forward(i_t));
           double best = -9e99;
           int besti = -1;
           for (int i = 0; i < dist.size(); ++i)
@@ -205,7 +205,7 @@ struct UniTagger
             affine_transform({i_thbias, i_l2th, fwds[t], i_r2th, revs[t]}));
         Expression i_t = affine_transform({i_tbias, i_th2t, i_th});
 
-        vector<float> dist = as_vector(cg.incremental_forward());
+        vector<float> dist = as_vector(cg.incremental_forward(i_t));
         double best = -9e99;
         int besti = -1;
         for (int i = 0; i < dist.size(); ++i)
