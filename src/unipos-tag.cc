@@ -351,7 +351,7 @@ void trainData(vector<pair<vector<int>, vector<int>>> &training, UniTagger<LSTMB
   }
 }
 
-void testData(vector<pair<vector<int>, vector<int>>> &test, UniTagger<LSTMBuilder> &tagger, string resultFile)
+void evaluateData(vector<pair<vector<int>, vector<int>>> &test, UniTagger<LSTMBuilder> &tagger, string resultFile)
 {
 
   ofstream outputW;
@@ -430,7 +430,7 @@ int main(int argc, char **argv)
   boost::archive::text_iarchive ia(in);
   ia >> model;
 
-  testData(unlabelled, tagger, resultFile);
+  evaluateData(unlabelled, tagger, resultFile);
 
   delete sgd;
 }
