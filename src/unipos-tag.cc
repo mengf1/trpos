@@ -29,9 +29,8 @@ unsigned TAG_DIM = 0;
 
 // set dynamically from input files
 unsigned TAG_SIZE = 0;
-unsigned VOCAB_SIZE= 0;
+unsigned VOCAB_SIZE_cl= 0;
 unsigned EMBEDDING_DIM= 0;
-unsigned INPUT_DIM = 0;
 
 // map a word to an embedding using cross-lingual word embeddings
 std::map<int, vector<float>> embeddings_cl;
@@ -39,8 +38,8 @@ std::map<int, vector<float>> embeddings_cl;
 bool eval = false;
 
 // dictionary for all languages
-cnn::Dict d;
-cnn::Dict td;
+dynet::Dict d;
+dynet::Dict td;
 
 int kNONE;
 int kSOS;
@@ -64,8 +63,8 @@ struct UniTagger
   Builder l2rbuilder;
   Builder r2lbuilder;
   explicit UniTagger(Model &model)
-      : l2rbuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, &model),
-        r2lbuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, &model)
+      : l2rbuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, model),
+        r2lbuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, model)
   {
     // do not need to generate word embeddings
     p_w_cl = model.add_lookup_parameters(VOCAB_SIZE_cl, {INPUT_DIM});
@@ -74,7 +73,7 @@ struct UniTagger
     // copy floats into p_w[i] for each word index i in map
     for (std::map<int, vector<float>>::iterator iter = embeddings_cl.begin(); iter != embeddings_cl.end(); iter++)
     {
-      p_w_cl->Initialize(iter->first, iter->second);
+      p_w_cl.initialize(iter->first, iter->second);
     }
 
     p_l2th = model.add_parameters({TAG_HIDDEN_DIM, HIDDEN_DIM});
@@ -138,7 +137,7 @@ struct UniTagger
         Expression i_t = affine_transform({i_tbias, i_th2t, i_th});
         if (cor)
         {
-          vector<float> dist = as_vector(cg.incremental_forward());
+          vector<float> dist = as_vector(cg.incremental_forward(i_t));
           double best = -9e99;
           int besti = -1;
           for (int i = 0; i < dist.size(); ++i)
@@ -198,7 +197,7 @@ struct UniTagger
 
     for (unsigned t = 0; t < slen; ++t)
     {
-if(tags[i]== kNONE)
+if(tags[t]== kNONE)
       {
       if (ntagged)
         (*ntagged)++;
@@ -206,7 +205,7 @@ if(tags[i]== kNONE)
           affine_transform({i_thbias, i_l2th, fwds[t], i_r2th, revs[t]}));
       Expression i_t = affine_transform({i_tbias, i_th2t, i_th});
 
-      vector<float> dist = as_vector(cg.incremental_forward());
+      vector<float> dist = as_vector(cg.incremental_forward(i_t));
       double best = -9e99;
       int besti = -1;
       for (int i = 0; i < dist.size(); ++i)
@@ -219,7 +218,7 @@ if(tags[i]== kNONE)
       }
 
       //save the tags
-      outputFile << td.Convert(besti) << " ";
+      outputFile << td.convert(besti) << " ";
     }
     }
     outputFile << "\n";
@@ -331,7 +330,7 @@ void trainData(vector<pair<vector<int>, vector<int>>> &training, UniTagger<LSTMB
   int report_every_i = 100;
   double loss = 0;
   double cor= 0;
-  int ttags = 0;
+  unsigned ttags = 0;
   unsigned budget = training.size();
   cerr << "\nTraining labelled data: size = " << budget << " sentences";
   for (unsigned i = 0; i < budget; ++i)
@@ -347,7 +346,7 @@ void trainData(vector<pair<vector<int>, vector<int>>> &training, UniTagger<LSTMB
     ++report;
     if (report % report_every_i == 0)
     {
-      cerr << "\n***TRAIN: E = " << (loss / ttags) << " ppl=" << exp(loss / ttags) << " (acc=" << (correct / ttags) << ") ";
+      cerr << "\n***TRAIN: E = " << (loss / ttags) << " ppl=" << exp(loss / ttags) << " (acc=" << (cor / ttags) << ") ";
     }
   }
 }
@@ -365,7 +364,7 @@ void testData(vector<pair<vector<int>, vector<int>>> &test, UniTagger<LSTMBuilde
   for (auto &sent : test)
   {
     ComputationGraph cg;
-    tagger.PredictTags(sent.first, sent.second, cg, &ttags, outputFile);
+    tagger.PredictTags(sent.first, sent.second, cg, &ttags, outputW);
   }
   eval = false;
   outputW.close();
@@ -375,11 +374,11 @@ void testData(vector<pair<vector<int>, vector<int>>> &test, UniTagger<LSTMBuilde
 //argv: embeddings unlabelled_data pretrained_model
 int main(int argc, char **argv)
 {
-  dynet::Initialize(argc, argv);
+  dynet::initialize(argc, argv);
 
-  kNONE = td.Convert("*");
-  kSOS = d.Convert("<S>");
-  kEOS = d.Convert("</S>");
+  kNONE = td.convert("*");
+  kSOS = d.convert("<S>");
+  kEOS = d.convert("</S>");
 
   vector<pair<vector<int>, vector<int>>> unlabelled;
   string line;
@@ -389,18 +388,18 @@ int main(int argc, char **argv)
   unsigned dim = 0;
   string embeddingFile = argv[1];
   embeddings_cl = importEmbeddings(embeddingFile);
-  d.Freeze(); // no new word types allowed
-  d.SetUnk("<UNK>");
-  VOCAB_SIZE = d.size();
+  d.freeze(); // no new word types allowed
+  d.set_unk("<UNK>");
+  VOCAB_SIZE_cl = d.size();
 
   string dataFile = argv[2];
   unlabelled = loadCorpus(dataFile);
-  string resultFile = argv[2] + ".unipos";
+  string resultFile = dataFile + ".unipos";
 
   // use universal tagset
   for (const string &tag : TAG_SET)
   {
-    td.Convert(tag);
+    td.convert(tag);
   }
   td.freeze();
   TAG_SIZE = td.size();
@@ -426,7 +425,7 @@ int main(int argc, char **argv)
 
   UniTagger<LSTMBuilder> tagger(model);
   // import the model
-  String modelFile = argv[3];
+  string modelFile = argv[3];
   ifstream in(modelFile);
   boost::archive::text_iarchive ia(in);
   ia >> model;
