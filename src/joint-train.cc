@@ -29,9 +29,8 @@ unsigned TAG_DIM = 0;
 
 // set dynamically from input files
 unsigned TAG_SIZE = 0;
-unsigned VOCAB_SIZE = 0;
+unsigned VOCAB_SIZE_cl = 0;
 unsigned EMBEDDING_DIM = 0;
-unsigned INPUT_DIM = 0;
 
 // map a word to an embedding using cross-lingual word embeddings
 std::map<int, vector<float>> embeddings_cl;
@@ -39,29 +38,16 @@ std::map<int, vector<float>> embeddings_cl;
 bool eval = false;
 
 // dictionary for all languages
-cnn::Dict d;
-cnn::Dict td;
+dynet::Dict d;
+dynet::Dict td;
 
 int kNONE;
 int kSOS;
 int kEOS;
 int UNK;
 
-void split(const string &s, char c, vector<string> &v)
-{
-  string::size_type i = 0;
-  string::size_type j = s.find(c);
-
-  while (j != string::npos)
-  {
-    v.push_back(s.substr(i, j - i));
-    i = ++j;
-    j = s.find(c, j);
-
-    if (j == string::npos)
-      v.push_back(s.substr(i, s.length()));
-  }
-}
+// use the universal tagset
+//const string TAG_SET[] = {"VERB", "NOUN", "PRON", "ADJ", "ADV", "ADP", "CONJ", "DET", "NUM", "PRT", "X", "."};
 
 template <class Builder>
 struct JointTagger
@@ -81,8 +67,8 @@ struct JointTagger
   Builder l2rbuilder;
   Builder r2lbuilder;
   explicit JointTagger(Model &model)
-      : l2rbuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, &model),
-        r2lbuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, &model)
+      : l2rbuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, model),
+        r2lbuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, model)
   {
     // do not need to generate word embeddings
     p_w_cl = model.add_lookup_parameters(VOCAB_SIZE_cl, {INPUT_DIM});
@@ -91,7 +77,7 @@ struct JointTagger
     // copy floats into p_w[i] for each word index i in map
     for (std::map<int, vector<float>>::iterator iter = embeddings_cl.begin(); iter != embeddings_cl.end(); iter++)
     {
-      p_w_cl->Initialize(iter->first, iter->second);
+      p_w_cl.initialize(iter->first, iter->second);
     }
 
     p_l2th = model.add_parameters({TAG_HIDDEN_DIM, HIDDEN_DIM});
@@ -179,7 +165,7 @@ struct JointTagger
   }
 
   // return Expression of total loss
-  Expression Evaluate(const vector<int> &sent, const vector<int> &tags,
+  Expression Test(const vector<int> &sent, const vector<int> &tags,
                       ComputationGraph &cg, double *cor = 0,
                       unsigned *ntagged = 0)
   {
@@ -453,9 +439,8 @@ void trainData(vector<pair<vector<int>, vector<int>>> &training, JointTagger<LST
   }
 }
 
-void testData(vector<pair<vector<int>, vector<int>>> &test, JointTagger<LSTMBuilder> &tagger, string resultFile)
+void evaluateData(vector<pair<vector<int>, vector<int>>> &test, JointTagger<LSTMBuilder> &tagger, string resultFile)
 {
-
   ofstream outputW;
   outputW.open(resultFile);
   //dev data
@@ -472,7 +457,7 @@ void testData(vector<pair<vector<int>, vector<int>>> &test, JointTagger<LSTMBuil
   cerr << "\n***TEST:  Done ";
 }
 
-void evalData(vector<pair<vector<int>, vector<int>>> &dev, JointTagger<LSTMBuilder> &tagger, double &loss)
+void testData(vector<pair<vector<int>, vector<int>>> &dev, JointTagger<LSTMBuilder> &tagger, double &loss)
 {
 
   //dev data
@@ -482,7 +467,7 @@ void evalData(vector<pair<vector<int>, vector<int>>> &dev, JointTagger<LSTMBuild
   for (auto &sent : dev)
   {
     ComputationGraph cg;
-    Expression loss_expr = tagger.Evaluate(sent.first, sent.second, cg, &corr, &tags);
+    Expression loss_expr = tagger.Test(sent.first, sent.second, cg, &corr, &tags);
     loss += as_scalar(cg.forward(loss_expr));
   }
 
@@ -493,11 +478,11 @@ void evalData(vector<pair<vector<int>, vector<int>>> &dev, JointTagger<LSTMBuild
 //argv: embeddings gold_data distant_data dev max_epoch
 int main(int argc, char **argv)
 {
-  dynet::Initialize(argc, argv);
+  dynet::initialize(argc, argv);
 
-  kNONE = td.Convert("*");
-  kSOS = d.Convert("<S>");
-  kEOS = d.Convert("</S>");
+  kNONE = td.convert("*");
+  kSOS = d.convert("<S>");
+  kEOS = d.convert("</S>");
 
   vector<pair<vector<int>, vector<int>>> gold, distant, dev;
   string line;
@@ -507,9 +492,9 @@ int main(int argc, char **argv)
   unsigned dim = 0;
   string embeddingFile = argv[1];
   embeddings_cl = importEmbeddings(embeddingFile);
-  d.Freeze(); // no new word types allowed
-  d.SetUnk("<UNK>");
-  VOCAB_SIZE = d.size();
+  d.freeze(); // no new word types allowed
+  d.set_unk("<UNK>");
+  VOCAB_SIZE_cl = d.size();
 
   string dataFile = argv[2];
   gold = loadCorpus(dataFile);
@@ -571,7 +556,7 @@ int main(int argc, char **argv)
     sgd->update_epoch();
 
     double dloss = 0;
-    evalData(dev, tagger, dloss);
+    testData(dev, tagger, dloss);
     if (dloss < best)
     {
       best = dloss;
