@@ -351,7 +351,7 @@ void trainData(vector<pair<vector<int>, vector<int>>> &training, UniTagger<LSTMB
   }
 }
 
-void testData(vector<pair<vector<int>, vector<int>>> &test, UniTagger<LSTMBuilder> &tagger, string resultFile)
+void evaluateData(vector<pair<vector<int>, vector<int>>> &test, UniTagger<LSTMBuilder> &tagger, string resultFile)
 {
 
   ofstream outputW;
