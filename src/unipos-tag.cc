@@ -29,8 +29,8 @@ unsigned TAG_DIM = 0;
 
 // set dynamically from input files
 unsigned TAG_SIZE = 0;
-unsigned VOCAB_SIZE_cl= 0;
-unsigned EMBEDDING_DIM= 0;
+unsigned VOCAB_SIZE_cl = 0;
+unsigned EMBEDDING_DIM = 0;
 
 // map a word to an embedding using cross-lingual word embeddings
 std::map<int, vector<float>> embeddings_cl;
@@ -197,29 +197,29 @@ struct UniTagger
 
     for (unsigned t = 0; t < slen; ++t)
     {
-if(tags[t]== kNONE)
+      if (tags[t] == kNONE)
       {
-      if (ntagged)
-        (*ntagged)++;
-      Expression i_th = tanh(
-          affine_transform({i_thbias, i_l2th, fwds[t], i_r2th, revs[t]}));
-      Expression i_t = affine_transform({i_tbias, i_th2t, i_th});
+        if (ntagged)
+          (*ntagged)++;
+        Expression i_th = tanh(
+            affine_transform({i_thbias, i_l2th, fwds[t], i_r2th, revs[t]}));
+        Expression i_t = affine_transform({i_tbias, i_th2t, i_th});
 
-      vector<float> dist = as_vector(cg.incremental_forward(i_t));
-      double best = -9e99;
-      int besti = -1;
-      for (int i = 0; i < dist.size(); ++i)
-      {
-        if (dist[i] > best)
+        vector<float> dist = as_vector(cg.incremental_forward(i_t));
+        double best = -9e99;
+        int besti = -1;
+        for (int i = 0; i < dist.size(); ++i)
         {
-          best = dist[i];
-          besti = i;
+          if (dist[i] > best)
+          {
+            best = dist[i];
+            besti = i;
+          }
         }
-      }
 
-      //save the tags
-      outputFile << td.convert(besti) << " ";
-    }
+        //save the tags
+        outputFile << td.convert(besti) << " ";
+      }
     }
     outputFile << "\n";
   }
@@ -329,7 +329,7 @@ void trainData(vector<pair<vector<int>, vector<int>>> &training, UniTagger<LSTMB
   int report = 0;
   int report_every_i = 100;
   double loss = 0;
-  double cor= 0;
+  double cor = 0;
   unsigned ttags = 0;
   unsigned budget = training.size();
   cerr << "\nTraining labelled data: size = " << budget << " sentences";
