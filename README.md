@@ -13,7 +13,7 @@ It's developed on dynet toolkit.
 
 ## Code
 - UniTagger: a universal POS tagger
-- JointTagger: a tranferring model using both the gold and distant data
+- JointTagger: a tranfer learning model using both the gold and distant data
 
 ## Data format
 The format of input data is as follows:
