@@ -166,8 +166,8 @@ struct JointTagger
 
   // return Expression of total loss
   Expression Test(const vector<int> &sent, const vector<int> &tags,
-                      ComputationGraph &cg, double *cor = 0,
-                      unsigned *ntagged = 0)
+                  ComputationGraph &cg, double *cor = 0,
+                  unsigned *ntagged = 0)
   {
     const unsigned slen = sent.size();
     l2rbuilder.new_graph(cg); // reset RNN builder for new graph
