@@ -8,7 +8,7 @@ This source code is the basis of the following paper:
 ## Building
 It's developed on dynet toolkit.
 - Install dynet following [clab/dynet](https://github.com/clab/dynet).
-- Add the source code to folder *cnn/examples* and modify *CMakeLists.txt*.
+- Add the source code to folder *dynet/examples* and modify *CMakeLists.txt*.
 - Make again.
 
 ## Code
