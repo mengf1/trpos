@@ -3,7 +3,7 @@
 ## Introduction
 
 This source code is the basis of the following paper:
-> Model Transfer for Tagging Low-resource Languages using a Bilingual Dictionary, by Meng Fang and Trevor Cohn, ACL 2017
+> [Model Transfer for Tagging Low-resource Languages using a Bilingual Dictionary](http://www.aclweb.org/anthology/P/P17/P17-2093.pdf), by Meng Fang and Trevor Cohn, ACL 2017
 
 ## Building
 It's developed on dynet toolkit.
