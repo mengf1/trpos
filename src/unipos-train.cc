@@ -8,6 +8,7 @@
 #include "dynet/dict.h"
 #include "dynet/expr.h"
 #include "dynet/globals.h"
+#include <dynet/io.h>
 
 #include <fstream>
 #include <iostream>
@@ -164,7 +165,8 @@ struct UniTagger
   // prediction
   void PredictTags(const vector<int> &sent, const vector<int> &tags,
                    ComputationGraph &cg,
-                   unsigned *ntagged = 0, std::ofstream &outputFile = nullptr)
+                   unsigned *ntagged, 
+                   std::ofstream &outputFile)
   {
     const unsigned slen = sent.size();
     l2rbuilder.new_graph(cg); // reset RNN builder for new graph
@@ -342,7 +344,7 @@ void trainData(vector<pair<vector<int>, vector<int>>> &training, UniTagger<LSTMB
     Expression loss_expr = tagger.BuildTaggingGraph(sent.first, sent.second, cg, &cor, &ttags);
     loss += as_scalar(cg.forward(loss_expr));
     cg.backward(loss_expr);
-    sgd->update(1.0);
+    sgd->update();
     ++report;
     if (report % report_every_i == 0)
     {
@@ -445,10 +447,8 @@ int main(int argc, char **argv)
   }
 
   //save model
-
-  ofstream out(fname);
-  boost::archive::text_oarchive oa(out);
-  oa << model;
+  TextFileSaver s(fname);
+  s.save(model);
 
   delete sgd;
 }
